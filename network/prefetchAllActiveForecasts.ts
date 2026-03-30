@@ -30,6 +30,7 @@ import {
   WeatherStationSource,
 } from 'types/nationalAvalancheCenter';
 import {requestedTimeToUTCDate} from 'utils/date';
+import {parseKml} from 'utils/parseKml';
 
 export const prefetchAllActiveForecasts = async (
   queryClient: QueryClient,
@@ -40,6 +41,7 @@ export const prefetchAllActiveForecasts = async (
   snowboundHost: string,
   logger: Logger,
 ) => {
+  logger.info('prefetchAllActiveForecasts CALLED', center_id);
   const requestedTime = 'latest';
   const currentDateTime = requestedTimeToUTCDate(requestedTime);
   void preloadAvalancheProblemIcons(queryClient, logger);
@@ -60,6 +62,24 @@ export const prefetchAllActiveForecasts = async (
 
   await AvalancheCenterMetadataQuery.prefetch(queryClient, nationalAvalancheCenterHost, center_id, logger);
   const metadata = queryClient.getQueryData<AvalancheCenter>(AvalancheCenterMetadataQuery.queryKey(nationalAvalancheCenterHost, center_id));
+
+  if (metadata?.widget_config?.observation_viewer?.alternate_zones) {
+    const kmlUrl = metadata.widget_config.observation_viewer?.alternate_zones;
+    if (kmlUrl) {
+      void (async () => {
+        try {
+          const res = await fetch(kmlUrl);
+          const kmlText = await res.text();
+
+          const zones = parseKml(kmlText);
+          logger.info('Alternate zones', zones);
+          queryClient.setQueryData(['alternateZones', center_id], zones);
+        } catch (e) {
+          logger.warn('Failed to load alternate zones', e);
+        }
+      })();
+    }
+  }
 
   if (metadata?.widget_config?.danger_map) {
     void AvalancheCenterMapLayerQuery.prefetch(queryClient, nationalAvalancheCenterHost, center_id, logger);

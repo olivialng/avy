@@ -3,6 +3,7 @@
     "version": ">= 7.5.0",
     "appVersionSource": "remote"
   },
+  
   "build": {
     "main": {
       "developmentClient": true,
@@ -10,6 +11,11 @@
       "channel": "main",
       "env": {
         "APP_VARIANT": "preview"
+      }
+    },
+    "development": {
+      "ios": {
+        "simulator": true
       }
     },
     "adhoc": {
